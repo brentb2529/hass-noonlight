@@ -396,3 +396,45 @@ async def test_ambiguous_account_title_raises(hass, setup_entry):
             blocking=True,
         )
     assert err.value.translation_key == "ambiguous_account_title"
+
+
+@respx.mock
+async def test_dispatch_sends_5digit_zip(hass):
+    """A stored ZIP+4 is truncated to 5 digits for Noonlight (avoids a 400)."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Zip4",
+        entry_id="zip4",
+        data={
+            CONF_API_TOKEN: "t",
+            CONF_ENVIRONMENT: ENV_SANDBOX,
+            "name": "Owner",
+            "phone": "+15555550123",
+            "address": "1 St",
+            "city": "C",
+            "state": "CA",
+            "zip": "90001-1234",
+        },
+        options={
+            CONF_DEFAULT_ENTRY_DELAY: 30,
+            CONF_DEDUPE_SECONDS: 300,
+            CONF_SERVICES_GRANTED: ALL_NOONLIGHT_SERVICES,
+        },
+    )
+    entry.add_to_hass(hass)
+    respx.get(url__regex=r".*/dispatch/v1/alarms/.*/status").mock(
+        return_value=Response(404)
+    )
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    create = respx.post(_ALARMS).mock(
+        return_value=Response(201, json={"id": "a", "status": "ACTIVE"})
+    )
+
+    await hass.services.async_call(
+        DOMAIN, SVC_DISPATCH_POLICE, {"entry_delay_seconds": 0}, blocking=True
+    )
+    await hass.async_block_till_done()
+
+    payload = json.loads(create.calls.last.request.content)
+    assert payload["location"]["address"]["zip"] == "90001"

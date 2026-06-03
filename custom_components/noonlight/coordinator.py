@@ -254,7 +254,9 @@ class NoonlightCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "address": data[CONF_ADDRESS],
             "city": data[CONF_CITY],
             "state": data[CONF_STATE],
-            "zip_code": data[CONF_ZIP],
+            # Noonlight rejects a ZIP+4 (9-digit) with a 400; send the 5-digit
+            # ZIP even if the user stored the +4 form.
+            "zip_code": data[CONF_ZIP][:5],
         }
 
     # -- polling --------------------------------------------------------------
