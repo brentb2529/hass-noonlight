@@ -1,0 +1,121 @@
+blueprint:
+  name: "Noonlight: dispatch on Alarmo trigger"
+  description: >
+    Request a Noonlight emergency dispatch when an Alarmo alarm panel is
+    triggered, automatically including the sensor(s) that tripped it in the
+    responder instructions, and optionally cancel it when Alarmo is disarmed.
+
+
+    This is tuned for the Alarmo integration: it reads Alarmo's `open_sensors`
+    attribute to tell responders what set off the alarm. Alarmo runs its own
+    entry/exit countdown, so the Noonlight entry delay defaults to 0.
+  domain: automation
+  author: brentb2529
+  source_url: https://github.com/brentb2529/hass-noonlight/blob/scaffold-integration/blueprints/automation/noonlight/noonlight_dispatch_on_alarmo.yaml
+  input:
+    alarm_panel:
+      name: Alarmo panel
+      description: Your Alarmo alarm control panel (usually alarm_control_panel.alarmo).
+      default: alarm_control_panel.alarmo
+      selector:
+        entity:
+          filter:
+            integration: alarmo
+            domain: alarm_control_panel
+    dispatch_action:
+      name: Dispatch type
+      description: Which Noonlight dispatch to request when Alarmo triggers.
+      default: noonlight.dispatch_police
+      selector:
+        select:
+          options:
+            - label: Police
+              value: noonlight.dispatch_police
+            - label: Fire
+              value: noonlight.dispatch_fire
+            - label: Medical
+              value: noonlight.dispatch_medical
+            - label: Police, fire, and medical
+              value: noonlight.dispatch_all
+    entry_delay:
+      name: Entry delay (seconds)
+      description: >
+        Cancelable grace window before Noonlight actually dispatches. Leave at
+        0 because Alarmo already runs its own entry countdown.
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 120
+          unit_of_measurement: seconds
+          mode: box
+    note_prefix:
+      name: Instructions prefix
+      description: >
+        Optional text prepended to the auto-generated "Triggered by ..." note
+        sent to responders (for example, a property nickname).
+      default: ""
+      selector:
+        text:
+    account:
+      name: Noonlight site
+      description: >
+        Optional. Only needed when more than one Noonlight site is configured;
+        use the config entry title or ID. Leave blank for a single site.
+      default: ""
+      selector:
+        text:
+    cancel_on_disarm:
+      name: Cancel when disarmed
+      description: >
+        Cancel the Noonlight dispatch if Alarmo is disarmed (aborts a pending
+        dispatch within the grace window).
+      default: true
+      selector:
+        boolean:
+
+mode: single
+
+variables:
+  alarm_panel: !input alarm_panel
+  note_prefix: !input note_prefix
+  cancel_on_disarm: !input cancel_on_disarm
+
+triggers:
+  - trigger: state
+    entity_id: !input alarm_panel
+    to: triggered
+    id: dispatch
+  - trigger: state
+    entity_id: !input alarm_panel
+    to: disarmed
+    id: cancel
+
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: dispatch
+        sequence:
+          - alias: "Request the Noonlight dispatch with Alarmo's triggering sensors"
+            action: !input dispatch_action
+            data:
+              entry_delay_seconds: !input entry_delay
+              account: !input account
+              instructions: >-
+                {% set ns = namespace(items=[]) %}
+                {% for s in (state_attr(alarm_panel, 'open_sensors') or {}) %}
+                  {% set ns.items = ns.items + [states[s].name if states[s] is not none else s] %}
+                {% endfor %}
+                {{ (note_prefix ~ ' ') if note_prefix else '' }}{{ ('Triggered by ' ~ (ns.items | join(', '))) if ns.items else 'Alarm triggered' }}
+      - conditions:
+          - condition: trigger
+            id: cancel
+          - condition: template
+            value_template: "{{ cancel_on_disarm }}"
+        sequence:
+          - alias: "Cancel a pending dispatch on disarm"
+            action: noonlight.cancel
+            data:
+              reason: "Alarmo disarmed"
+              account: !input account
