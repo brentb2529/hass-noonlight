@@ -8,6 +8,10 @@ on:
     - cron: "0 6 * * 1"
   workflow_dispatch:
 
+# Least privilege: hassfest + HACS validation only read the repo.
+permissions:
+  contents: read
+
 jobs:
   hassfest:
     name: Home Assistant hassfest

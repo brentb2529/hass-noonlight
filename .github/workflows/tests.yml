@@ -6,6 +6,11 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Least privilege: these workflows only read the repo. Fork PRs already get a
+# read-only token; this also constrains the token on push/scheduled runs.
+permissions:
+  contents: read
+
 jobs:
   pytest:
     name: pytest (py${{ matrix.python-version }})

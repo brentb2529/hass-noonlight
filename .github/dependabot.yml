@@ -1,0 +1,14 @@
+version: 2
+updates:
+  # Keep GitHub Actions (checkout, setup-python, hassfest, hacs) up to date.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+  # Keep Python test/dev dependencies up to date.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5

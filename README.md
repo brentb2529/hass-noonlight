@@ -164,6 +164,17 @@ idle ──dispatch_*──> pending ──(entry-delay timer)──> dispatched
 - **Dispatch seemingly ignored** → check the de-dup window; repeats inside it are
   intentionally suppressed (look for a warning in the logs).
 
+## Blueprints
+
+Ready-made automation blueprints wire an alarm panel straight to Noonlight —
+import, pick your panel and dispatch type, done. Both support a cancelable
+entry delay and auto-cancel when the panel is disarmed.
+
+| Blueprint | Use it for | Import |
+| --------- | ---------- | ------ |
+| [Dispatch on alarm trigger](blueprints/automation/noonlight/noonlight_dispatch_on_alarm.yaml) | Any `alarm_control_panel` (Manual, AlarmDecoder, …) | [![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fbrentb2529%2Fhass-noonlight%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fnoonlight%2Fnoonlight_dispatch_on_alarm.yaml) |
+| [Dispatch on Alarmo trigger](blueprints/automation/noonlight/noonlight_dispatch_on_alarmo.yaml) | [Alarmo](https://github.com/nielsfaber/alarmo) — also names the triggering sensor(s) in the responder note | [![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fbrentb2529%2Fhass-noonlight%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fnoonlight%2Fnoonlight_dispatch_on_alarmo.yaml) |
+
 ## Links
 
 - Noonlight Dispatch API: <https://docs.noonlight.com/reference>

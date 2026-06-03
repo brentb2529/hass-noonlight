@@ -11,6 +11,8 @@ automations through [Noonlight](https://www.noonlight.com) — no Python require
 - **Sandbox** environment for safe testing — never alerts real responders until
   you opt into production and acknowledge the disclosure.
 - Append-only audit log of every state change and API call.
+- Importable **automation blueprints** (generic + Alarmo-tuned) — see the
+  Blueprints section of the README.
 
 > ⚠️ This integration can summon real emergency responders. Read the safety
 > section of the README before switching to the production environment.
