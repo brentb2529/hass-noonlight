@@ -1,6 +1,6 @@
 # Test toolchain. pytest-homeassistant-custom-component pins a matching
 # Home Assistant core + pytest stack; respx mocks the httpx-based API client
 # (we use httpx, not aiohttp, so respx replaces the spec's aioresponses).
-pytest-homeassistant-custom-component>=0.13
+pytest-homeassistant-custom-component>=0.13.337
 respx>=0.20
 pytest-cov>=4.1
