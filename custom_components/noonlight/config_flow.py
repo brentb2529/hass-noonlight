@@ -252,7 +252,22 @@ async def _validate_credentials(
     try:
         await api.get_alarm_status("connection-test")
     except NoonlightAuthError as err:
-        raise _InvalidAuth from err
+        # Production FORBIDS the side-effect-free GET status probe (HTTP 403)
+        # even for tokens that can dispatch (POST /alarms works). Konnected's
+        # older integration never hit this because it only POSTs. Don't let the
+        # status-read restriction block setup — sandbox still allows the read
+        # (so it stays strictly validated), and on production the real dispatch
+        # is confirmed separately via the test_dispatch action.
+        status = getattr(err, "status_code", None)
+        if status == 403 or (status is None and environment not in NON_PRODUCTION_ENVIRONMENTS):
+            _LOGGER.warning(
+                "Noonlight status probe forbidden (HTTP %s) on '%s' during "
+                "setup; proceeding. The status endpoint is restricted on "
+                "production (dispatch via POST is unaffected) — confirm with "
+                "the test_dispatch action.", status, environment,
+            )
+        else:
+            raise _InvalidAuth from err
     except NoonlightConnectionError as err:
         raise _CannotConnect from err
     except NoonlightResponseError as err:

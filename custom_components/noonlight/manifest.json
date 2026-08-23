@@ -8,5 +8,5 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/brentb2529/hass-noonlight/issues",
   "requirements": ["noonlight-dispatch==0.1.2"],
-  "version": "0.1.0"
+  "version": "0.1.1"
 }
