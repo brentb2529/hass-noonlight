@@ -14,7 +14,13 @@ from noonlight_dispatch import (
     NoonlightResponseError,
 )
 
-from .const import HEARTBEAT_PROBE_ID, PLATFORMS
+from .const import (
+    CONF_ENVIRONMENT,
+    DEFAULT_ENVIRONMENT,
+    HEARTBEAT_PROBE_ID,
+    NON_PRODUCTION_ENVIRONMENTS,
+    PLATFORMS,
+)
 from .coordinator import NoonlightConfigEntry, NoonlightCoordinator
 from .services import async_setup_services
 
@@ -47,7 +53,20 @@ async def async_setup_entry(
     try:
         await coordinator.api.get_alarm_status(HEARTBEAT_PROBE_ID)
     except NoonlightAuthError as err:
-        raise ConfigEntryAuthFailed("Noonlight rejected the API token") from err
+        # Production forbids the side-effect-free GET status probe (HTTP 403)
+        # even for tokens that can dispatch (POST /alarms). Don't fail setup on
+        # it — sandbox permits the read (real auth failures there still block),
+        # and production dispatch is confirmed via the test_dispatch action.
+        status = getattr(err, "status_code", None)
+        environment = entry.data.get(CONF_ENVIRONMENT, DEFAULT_ENVIRONMENT)
+        if status == 403 or (status is None and environment not in NON_PRODUCTION_ENVIRONMENTS):
+            _LOGGER.warning(
+                "Noonlight status probe forbidden during setup on '%s'; "
+                "proceeding (production restricts status reads; dispatch via "
+                "POST is unaffected — verify with test_dispatch).", environment,
+            )
+        else:
+            raise ConfigEntryAuthFailed("Noonlight rejected the API token") from err
     except NoonlightConnectionError as err:
         raise ConfigEntryNotReady("Cannot reach Noonlight") from err
     except NoonlightResponseError as err:

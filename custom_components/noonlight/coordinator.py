@@ -51,6 +51,7 @@ from .const import (
     CONF_DEDUPE_SECONDS,
     CONF_DEFAULT_ENTRY_DELAY,
     CONF_ENVIRONMENT,
+    NON_PRODUCTION_ENVIRONMENTS,
     CONF_HEARTBEAT_MINUTES,
     CONF_LOCATION_ID,
     CONF_NAME,
@@ -315,13 +316,23 @@ class NoonlightCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         try:
             await self.api.get_alarm_status(HEARTBEAT_PROBE_ID)
             healthy = True  # 2xx (unlikely for a bogus id) — reachable + authed
+        except NoonlightAuthError as probe_err:
+            # Production forbids the side-effect-free GET status probe (HTTP 403)
+            # even for dispatch-capable tokens; treat that as reachable+authed
+            # (POST dispatch is unaffected). Sandbox permits the read, so a real
+            # auth failure there stays unhealthy.
+            status = getattr(probe_err, "status_code", None)
+            if status == 403 or (status is None and self._environment not in NON_PRODUCTION_ENVIRONMENTS):
+                healthy, err = True, None
+            else:
+                healthy, err = False, probe_err
         except NoonlightResponseError as probe_err:
             # Only a 404 on the bogus id proves reachable + authorized. A 5xx
             # outage or 429 rate-limit also raises NoonlightResponseError, and
             # must NOT be treated as healthy.
             healthy = probe_err.status_code == 404
             err = None if healthy else probe_err
-        except NoonlightError as probe_err:  # auth / connection failures
+        except NoonlightError as probe_err:  # other connection failures
             healthy, err = False, probe_err
 
         data = dict(self.data)
